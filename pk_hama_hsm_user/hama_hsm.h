@@ -34,30 +34,30 @@ namespace hama
    }                                                                  \
 
 
-#define HSM_STATE_HANDLER_DEF(_name, _state, _super, _handle, _entry, _exit, _statechart) \
+#define HSM_STATE_HANDLER_DEF(_name, _state, _super, _entry, _exit, _statechart) \
    static Hama_HSM_Statechart_T HSM_Statechart_##_name##_##_state [] =                    \
    {                                                                                      \
       _statechart                                                                         \
    };                                                                                     \
 
-#define HSM_STATECHART_DEF(_next_state, _signal) \
+#define HSM_STATECHART_DEF(_next_state, _signal, _handle) \
 {                                                \
    _signal,                                      \
-   _next_state                                   \
+   _next_state,                                  \
+   _handle                                       \
 },                                               \
 
-#define HSM_STATE_HANDLER_INDEX(_name, _state, _super, _handle, _entry, _exit, _statechart) \
+#define HSM_STATE_HANDLER_INDEX(_name, _state, _super, _entry, _exit, _statechart) \
 {                                                                                           \
    _state,                                                                                  \
    _super,                                                                                  \
    HSM_Statechart_##_name##_##_state,                                                       \
    Num_Elements(HSM_Statechart_##_name##_##_state),                                         \
-   _handle,                                                                                 \
    _entry,                                                                                  \
    _exit,                                                                                   \
 },                                                                                          \
 
-#define HSM_STATECHART_INDEX( _state, _next_state, _signal) \
+#define HSM_STATECHART_INDEX(_next_state, _signal, _handle) \
 
 /*=====================================================================================* 
  * Exported Type Declarations
@@ -70,8 +70,8 @@ namespace hama
 /*=====================================================================================* 
  * Exported Function Prototypes
  *=====================================================================================*/
-extern void HSM_Init(Hama_HSM_T& machine, Hama_HSM_Handle_T * statehandler,
-      uint32_t const sizeof_statehandler);
+extern void HSM_Init(Hama_HSM_State_T const initial_state, Hama_HSM_T& machine,
+      Hama_HSM_Handle_T * statehandler, uint32_t const sizeof_statehandler);
 
 extern void HSM_Dispatch(Hama_HSM_T& machine, Hama_HSM_Event_T const & hsm_ev);
 

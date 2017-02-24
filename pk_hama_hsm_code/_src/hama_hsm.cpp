@@ -44,11 +44,11 @@
 template <typename T, bool (*EqualsTo) (uint8_t const, T const &) >
 static T * HSM_Tb_Search(uint8_t const key, T * table, uint32_t const size);
 
-static void On_Entry(Hama_HSM_T& machine,Hama_HSM_Handle_T & handle);
+static void On_Entry(Hama_HSM_T& machine, Hama_HSM_State_T const target);
 
-static void On_Exit(Hama_HSM_T& machine, Hama_HSM_Handle_T & handle);
+static void On_Exit(Hama_HSM_T& machine);
 
-static void On_Handle(Hama_HSM_T& machine, Hama_HSM_Handle_T & handle);
+static Hama_HSM_State_T On_Handle(Hama_HSM_T& machine, Hama_HSM_Signal_T const signal);
 /*=====================================================================================* 
  * Local Inline-Function Like Macros
  *=====================================================================================*/
@@ -81,58 +81,95 @@ T * HSM_Tb_Search(uint8_t const key, T * table, uint32_t const size)
    return found;
 }
 
-void On_Entry(Hama_HSM_T& machine,Hama_HSM_Handle_T & handle)
+void On_Entry(Hama_HSM_T& machine,Hama_HSM_State_T const target)
 {
-   Hama_HSM_Handle_T * found_handle =
-         HSM_Tb_Search<Hama_HSM_Handle_T, HSM_Handle_Equals_To>( handle.super,
-            machine.statehandler, machine.sizeof_statehandler);
-   TR_INFO_2("%s state -%d ", __FUNCTION__, handle.state);
-   if(NULL != found_handle)
+   Hama_HSM_State_T super_state = target;
+   Hama_HSM_State_T prev_state = machine.sizeof_statehandler; // top state's super state
+   Hama_HSM_Handle_T const * handle = NULL;
+   TR_INFO_1("%s", __FUNCTION__);
+   // Find top state
+   do
    {
-      On_Entry(machine, *found_handle);
-   }
-
-   handle.entry(machine);
-}
-void On_Exit(Hama_HSM_T& machine, Hama_HSM_Handle_T & handle)
-{
-   handle.exit(machine);
-   Hama_HSM_Handle_T * found_handle =
-         HSM_Tb_Search<Hama_HSM_Handle_T, HSM_Handle_Equals_To>( handle.super,
-               machine.statehandler, machine.sizeof_statehandler);
-
-   TR_INFO_2("%s state -%d ", __FUNCTION__, handle.state);
-   if(NULL != found_handle)
-   {
-      On_Exit(machine, *found_handle);
-   }
-}
-void On_Handle(Hama_HSM_T& machine, Hama_HSM_Handle_T & handle)
-{
-   if(NULL != handle.handle)
-   {
-      handle.handle(machine);
-   }
-   else
-   {
-      Hama_HSM_Handle_T * found_handle =
-            HSM_Tb_Search<Hama_HSM_Handle_T, HSM_Handle_Equals_To>( handle.super,
-                  machine.statehandler, machine.sizeof_statehandler);
-      TR_INFO_2("%s state -%d ", __FUNCTION__, handle.state);
-      if(NULL != found_handle)
+      super_state = target;
+      do
       {
-         On_Handle(machine, *found_handle);
+         if(NULL != handle)
+         {
+            super_state = handle->super;
+         }
+         handle = HSM_Tb_Search<Hama_HSM_Handle_T,HSM_Handle_Equals_To>(super_state,
+               machine.statehandler, machine.sizeof_statehandler);
+      }
+      while(NULL != handle &&
+            prev_state != handle->super);
+
+      handle->entry(machine);
+      prev_state = super_state;
+   }
+   while(super_state != target);
+}
+
+void On_Exit(Hama_HSM_T& machine)
+{
+   Hama_HSM_State_T super_state = machine.current_state;
+   Hama_HSM_Handle_T const * handle = NULL;
+   TR_INFO_1("%s", __FUNCTION__);
+   do
+   {
+      handle = HSM_Tb_Search<Hama_HSM_Handle_T, HSM_Handle_Equals_To>(super_state,
+            machine.statehandler, machine.sizeof_statehandler);
+      handle->exit(machine);
+      super_state = handle->super;
+   }
+   while(NULL != handle &&
+         super_state < machine.sizeof_statehandler);
+}
+
+Hama_HSM_State_T On_Handle(Hama_HSM_T& machine, Hama_HSM_Signal_T const signal)
+{
+   Hama_HSM_State_T target = machine.sizeof_statehandler;
+   Hama_HSM_State_T super_state = machine.current_state;
+   Hama_HSM_Handle_T const * handle = NULL;
+   TR_INFO_1("%s", __FUNCTION__);
+   do
+   {
+      handle = HSM_Tb_Search<Hama_HSM_Handle_T, HSM_Handle_Equals_To>(super_state,
+            machine.statehandler, machine.sizeof_statehandler);
+
+      if(NULL != handle)
+      {
+         Hama_HSM_Statechart_T const * statechart =
+               HSM_Tb_Search<Hama_HSM_Statechart_T, HSM_Statechart_Equals_To>(signal,
+                     handle->statechart, handle->sizeof_statechart);
+
+         if(NULL != statechart)
+         {
+            if(statechart->handle(machine))
+            {
+               target = statechart->next_state;
+            }
+            break;
+         }
+         else
+         {
+            super_state = handle->super;
+         }
       }
    }
+   while(NULL != handle &&
+         super_state < machine.sizeof_statehandler);
+   return target;
 }
 /*=====================================================================================* 
  * Exported Function Definitions
  *=====================================================================================*/
-void hama::HSM_Init(Hama_HSM_T& machine, Hama_HSM_Handle_T * statehandler, uint32_t const sizeof_statehandler)
+void hama::HSM_Init(Hama_HSM_State_T const initial_state, Hama_HSM_T& machine, Hama_HSM_Handle_T * statehandler, uint32_t const sizeof_statehandler)
 {
-   machine.current_state = 0;
+   machine.current_state = initial_state;
    machine.statehandler = statehandler;
    machine.sizeof_statehandler = sizeof_statehandler;
+
+   On_Entry(machine, initial_state);
 
    TR_INFO_1("%s Machine Definition :", __FUNCTION__);
    TR_INFO_2("current state - %d, total states - %d ", machine.current_state, machine.sizeof_statehandler);
@@ -167,46 +204,19 @@ void hama::HSM_Init(Hama_HSM_T& machine, Hama_HSM_Handle_T * statehandler, uint3
 
 void hama::HSM_Dispatch(Hama_HSM_T& machine, Hama_HSM_Event_T const & hsm_ev)
 {
-   Hama_HSM_Handle_T * found_handle =
-         HSM_Tb_Search<Hama_HSM_Handle_T, HSM_Handle_Equals_To>( machine.current_state,
-               machine.statehandler, machine.sizeof_statehandler);
-
-   TR_INFO_1("handle state %d", machine.current_state);
-
-   if(NULL != found_handle)
+   //Find current state handler
+   if(machine.current_state < machine.sizeof_statehandler)
    {
-      Hama_HSM_Statechart_T * found_statechart =
-            HSM_Tb_Search<Hama_HSM_Statechart_T, HSM_Statechart_Equals_To>( hsm_ev.signal,
-                  found_handle->statechart, found_handle->sizeof_statechart);
-
-      TR_INFO_1("state chart signal - %d", hsm_ev.signal);
-      if(NULL != found_statechart)
+      Hama_HSM_State_T target_state = On_Handle(machine, hsm_ev.signal);
+      if(target_state < machine.sizeof_statehandler)
       {
-         Hama_HSM_Handle_T * found_next_handle =
-               HSM_Tb_Search<Hama_HSM_Handle_T, HSM_Handle_Equals_To>( found_statechart->next_state,
-                     machine.statehandler, machine.sizeof_statehandler);
-
-         TR_INFO_1("state transition - %d", found_statechart->next_state);
-         if(NULL != found_next_handle)
-         {
-            On_Exit(machine, *found_handle);
-            On_Entry(machine, *found_next_handle);
-            machine.current_state = found_next_handle->state;
-         }
-         else
-         {
-            TR_INFO("NULL == found_next_handle");
-         }
-      }
-      else
-      {
-         TR_INFO("NULL == found_statechart");
+         On_Exit(machine);
+         On_Entry(machine, target_state);
+         machine.current_state = target_state;
       }
    }
-   else
-   {
-      TR_INFO("NULL == found_handle");
-   }
+
+
 }
 /*=====================================================================================* 
  * hama_hsm.cpp
