@@ -29,7 +29,11 @@
 /*=====================================================================================* 
  * Local Type Definitions
  *=====================================================================================*/
-
+struct Statechart_Key_T
+{
+   Hama_HSM_Signal_T signal;
+   Hama_HSM_State_T state;
+};
 /*=====================================================================================* 
  * Local Object Definitions
  *=====================================================================================*/
@@ -41,8 +45,8 @@
 /*=====================================================================================* 
  * Local Function Prototypes
  *=====================================================================================*/
-template <typename T, bool (*EqualsTo) (uint8_t const, T const &) >
-static T * HSM_Tb_Search(uint8_t const key, T * table, uint32_t const size);
+template <typename K, typename T, bool (*EqualsTo)(K const &, T const &)>
+static uint32_t HSM_Tb_Search(K const & key, T * table, uint32_t const size, T * found);
 
 static void On_Entry(Hama_HSM_T& machine, Hama_HSM_State_T const target);
 
@@ -52,24 +56,23 @@ static Hama_HSM_State_T On_Handle(Hama_HSM_T& machine, Hama_HSM_Signal_T const s
 /*=====================================================================================* 
  * Local Inline-Function Like Macros
  *=====================================================================================*/
-inline bool HSM_Statechart_Equals_To(uint8_t const a, Hama_HSM_Statechart_T const & b)
+inline bool HSM_Statechart_Equals_To(Statechart_Key_T const & a, Hama_HSM_Statechart_T const & b)
 {
-   return a == b.signal;
+   return (a.signal == b.signal) && (a.state == b.source_state);
 }
 
-inline bool HSM_Handle_Equals_To(uint8_t const a, Hama_HSM_Handle_T const & b)
+inline bool HSM_Handle_Equals_To(Hama_HSM_State_T const & a, Hama_HSM_Handle_T const & b)
 {
    return a == b.state;
 }
 /*=====================================================================================* 
  * Local Function Definitions
  *=====================================================================================*/
-template <typename T, bool (*EqualsTo) (uint8_t const, T const &) >
-T * HSM_Tb_Search(uint8_t const key, T * table, uint32_t const size)
+template <typename K, typename T, bool (*EqualsTo) (K const &, T const &) >
+uint32_t HSM_Tb_Search(K const & key, T * table, uint32_t const size, T * found)
 {
-   T * found = NULL;
-
-   for(uint32_t i = 0; i < size; ++i)
+   uint32_t i = 0;
+   for(; i < size; ++i)
    {
       if(EqualsTo(key, table[i]))
       {
@@ -77,15 +80,14 @@ T * HSM_Tb_Search(uint8_t const key, T * table, uint32_t const size)
          break;
       }
    }
-
-   return found;
+   return i;
 }
 
 void On_Entry(Hama_HSM_T& machine,Hama_HSM_State_T const target)
 {
    Hama_HSM_State_T super_state = target;
-   Hama_HSM_State_T prev_state = machine.sizeof_statehandler; // top state's super state
-   Hama_HSM_Handle_T const * handle = NULL;
+   Hama_HSM_State_T prev_state = machine.size_statehandler; // top state's super state
+   Hama_HSM_Handle_T * handle = NULL;
    TR_INFO_1("%s", __FUNCTION__);
    // Find top state
    do
@@ -98,13 +100,17 @@ void On_Entry(Hama_HSM_T& machine,Hama_HSM_State_T const target)
             super_state = handle->super;
             TR_INFO_1("state = %d", super_state);
          }
-         handle = HSM_Tb_Search<Hama_HSM_Handle_T,HSM_Handle_Equals_To>(super_state,
-               machine.statehandler, machine.sizeof_statehandler);
+         (void) HSM_Tb_Search<Hama_HSM_State_T, Hama_HSM_Handle_T,
+               HSM_Handle_Equals_To>(super_state,
+               machine.statehandler, machine.size_statehandler, handle);
       }
       while(NULL != handle &&
             prev_state != handle->super);
 
-      handle->entry(machine);
+      if(NULL != handle && NULL != handle->entry)
+      {
+         handle->entry(machine);
+      }
       prev_state = super_state;
    }
    while(super_state != target);
@@ -113,78 +119,90 @@ void On_Entry(Hama_HSM_T& machine,Hama_HSM_State_T const target)
 void On_Exit(Hama_HSM_T& machine)
 {
    Hama_HSM_State_T super_state = machine.current_state;
-   Hama_HSM_Handle_T const * handle = NULL;
+   Hama_HSM_Handle_T * handle = NULL;
    TR_INFO_1("%s", __FUNCTION__);
    do
    {
-      handle = HSM_Tb_Search<Hama_HSM_Handle_T, HSM_Handle_Equals_To>(super_state,
-            machine.statehandler, machine.sizeof_statehandler);
-      handle->exit(machine);
-      super_state = handle->super;
+      (void)HSM_Tb_Search<Hama_HSM_State_T, Hama_HSM_Handle_T,
+            HSM_Handle_Equals_To>(super_state,
+            machine.statehandler, machine.size_statehandler, handle);
+      if(NULL != handle && handle->exit)
+      {
+         handle->exit(machine);
+         super_state = handle->super;
+      }
    }
    while(NULL != handle &&
-         super_state < machine.sizeof_statehandler);
+         super_state < machine.size_statehandler);
 }
 
 Hama_HSM_State_T On_Guard(Hama_HSM_T & machine, Hama_HSM_Signal_T const signal,
-      Hama_HSM_Statechart_T const * pseudostate, uint32_t pseudostate_size)
+      Hama_HSM_Handle_T * handle)
 {
-   Hama_HSM_State_T target = machine.sizeof_statehandler;
-   while(NULL != pseudostate)
+   Hama_HSM_State_T target = machine.size_statehandler;
+   uint32_t statechart_num = 0;
+   Hama_HSM_Statechart_T * pseudostate = NULL;
+   Statechart_Key_T key = { signal, handle->state };
+   TR_INFO_1("%s", __FUNCTION__);
+
+   while(statechart_num < machine.size_statechart)
    {
-         if(pseudostate->guard(machine))
+      statechart_num = HSM_Tb_Search<Statechart_Key_T, Hama_HSM_Statechart_T,
+            HSM_Statechart_Equals_To>(key,
+            machine.statechart, machine.size_statechart, pseudostate);
+
+      if(NULL != pseudostate)
+      {
+         if(NULL == pseudostate->guard || pseudostate->guard(machine))
          {
             machine.transitions[machine.transition_idx++] = pseudostate->transition;
-            pseudostate_size = pseudostate->sizeof_pseudostates;
-            pseudostate = pseudostate->pseudostates;
          }
          else
          {
             break;
          }
-      pseudostate = HSM_Tb_Search<Hama_HSM_Statechart_T, HSM_Statechart_Equals_To>(signal,
-            pseudostate, pseudostate_size);
-
+      }
    }
    return target;
 }
 
 Hama_HSM_State_T On_Handle(Hama_HSM_T& machine, Hama_HSM_Signal_T const signal)
 {
-   Hama_HSM_State_T target = machine.sizeof_statehandler;
+   Hama_HSM_State_T target = machine.size_statehandler;
    Hama_HSM_State_T super_state = machine.current_state;
-   Hama_HSM_Handle_T const * handle = NULL;
+   Hama_HSM_Handle_T * handle = NULL;
    TR_INFO_1("%s", __FUNCTION__);
    machine.transition_idx = 0;
    do
    {
-      handle = HSM_Tb_Search<Hama_HSM_Handle_T, HSM_Handle_Equals_To>(super_state,
-            machine.statehandler, machine.sizeof_statehandler);
+      (void)HSM_Tb_Search<Hama_HSM_State_T, Hama_HSM_Handle_T,
+            HSM_Handle_Equals_To>(super_state,
+            machine.statehandler, machine.size_statehandler, handle);
 
-      if(NULL != handle)
+      if(NULL != handle) //State exists!
       {
-         Hama_HSM_Statechart_T const * statechart = handle->statechart;
-         size_t statechar_size = handle->sizeof_statechart;
+         target = On_Guard(machine, signal, handle);
 
-         target = On_Guard(machine, signal, statechart, statechar_size);
-
-         if(target < machine.sizeof_statehandler)
+         if(target < machine.size_statehandler)
          {
+            // Transition is done, target is found
             break;
          }
          else
          {
+            //No transition is found, move to parent_state handle
             super_state = handle->super;
          }
       }
    }
    while(NULL != handle &&
-         super_state < machine.sizeof_statehandler);
+         super_state < machine.size_statehandler);
    return target;
 }
 
 void On_Transition(Hama_HSM_T & machine)
 {
+   TR_INFO_1("%s", __FUNCTION__);
    void (**transition)(Hama_HSM_T & machine) = machine.transitions;
    while(machine.transition_idx--)
    {
@@ -198,59 +216,46 @@ void On_Transition(Hama_HSM_T & machine)
 /*=====================================================================================* 
  * Exported Function Definitions
  *=====================================================================================*/
-void hama::HSM_Init(Hama_HSM_State_T const initial_state, Hama_HSM_T& machine, Hama_HSM_Handle_T * statehandler, uint32_t const sizeof_statehandler)
+void hama::HSM_Init(Hama_HSM_State_T const initial_state, Hama_HSM_T& machine,
+      Hama_HSM_Handle_T * statehandler, uint32_t const sizeof_statehandler,
+      Hama_HSM_Statechart_T * statechart, uint32_t const sizeof_statechart)
 {
    machine.current_state = initial_state;
    machine.statehandler = statehandler;
-   machine.sizeof_statehandler = sizeof_statehandler;
+   machine.size_statehandler = sizeof_statehandler;
+   machine.statechart = statechart;
+   machine.size_statechart = sizeof_statechart;
    machine.transition_idx = 0;
 
    On_Entry(machine, initial_state);
 
    TR_INFO_1("%s Machine Definition :", __FUNCTION__);
-   TR_INFO_2("current state - %d, total states - %d ", machine.current_state, machine.sizeof_statehandler);
+   TR_INFO_2("current state - %d, total states - %d ", machine.current_state, machine.size_statehandler);
 
-   for(uint8_t i = 0; i < machine.sizeof_statehandler; ++i)
-   {
-      if( NULL != machine.statehandler)
-      {
-          TR_INFO_3("State - %d, Super state-%d, total state transitions - %d",
-                machine.statehandler[i].state, machine.statehandler[i].super, machine.statehandler[i].sizeof_statechart);
-
-          for(uint8_t j = 0; j < machine.statehandler[i].sizeof_statechart; ++j)
-          {
-             if(NULL != machine.statehandler[i].statechart)
-             {
-                TR_INFO_2("Next State - %d, Trigger Signal - %d",
-                      machine.statehandler[i].statechart[j].next_state,
-                      machine.statehandler[i].statechart[j].signal);
-             }
-             else
-             {
-                break;
-             }
-          }
-      }
-      else
-      {
-         break;
-      }
-   }
+   for(uint8_t i = 0; i < machine.size_statehandler; ++i)
+   {   }
 }
 
 void hama::HSM_Dispatch(Hama_HSM_T& machine, Hama_HSM_Event_T const & hsm_ev)
 {
+   TR_INFO_2("Dispatch on current %d, signal %d",
+         machine.current_state, hsm_ev.signal);
    //Find current state handler
-   if(machine.current_state < machine.sizeof_statehandler)
+   if(machine.current_state < machine.size_statehandler)
    {
       Hama_HSM_State_T target_state = On_Handle(machine, hsm_ev.signal);
 
-      if(target_state < machine.sizeof_statehandler)
+      if(target_state < machine.size_statehandler)
       {
+         TR_INFO_1("Transition to state %d", target_state);
          On_Exit(machine);
          On_Transition(machine);
          On_Entry(machine, target_state);
          machine.current_state = target_state;
+      }
+      else
+      {
+         TR_INFO("No transition to state");
       }
    }
 }
