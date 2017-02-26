@@ -35,14 +35,17 @@ typedef struct
 
 struct Hama_HSM_T;
 
-typedef struct
+struct Hama_HSM_Statechart_T
 {
    Hama_HSM_Signal_T signal;
    Hama_HSM_State_T next_state;
-   bool (*handle)(Hama_HSM_T & machine);
-}Hama_HSM_Statechart_T;
+   bool (*guard)(Hama_HSM_T & machine);
+   void (*transition)(Hama_HSM_T & machine);
+   Hama_HSM_Statechart_T * pseudostates;
+   uint32_t sizeof_pseudostates;
+};
 
-typedef struct
+struct Hama_HSM_Handle_T
 {
    Hama_HSM_State_T state;
    Hama_HSM_State_T super;
@@ -50,13 +53,15 @@ typedef struct
    uint32_t sizeof_statechart;
    void (*entry)(Hama_HSM_T & machine);
    void (*exit)(Hama_HSM_T & machine);
-}Hama_HSM_Handle_T;
+};
 
 struct Hama_HSM_T
 {
    Hama_HSM_State_T current_state;
    Hama_HSM_Handle_T * statehandler;
    uint32_t sizeof_statehandler;
+   void(*transitions[8])(Hama_HSM_T & machine);
+   uint8_t transition_idx;
 };
 /*=====================================================================================* 
  * hama_hsm_types.h

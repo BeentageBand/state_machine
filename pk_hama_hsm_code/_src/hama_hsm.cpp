@@ -96,6 +96,7 @@ void On_Entry(Hama_HSM_T& machine,Hama_HSM_State_T const target)
          if(NULL != handle)
          {
             super_state = handle->super;
+            TR_INFO_1("state = %d", super_state);
          }
          handle = HSM_Tb_Search<Hama_HSM_Handle_T,HSM_Handle_Equals_To>(super_state,
                machine.statehandler, machine.sizeof_statehandler);
@@ -125,12 +126,36 @@ void On_Exit(Hama_HSM_T& machine)
          super_state < machine.sizeof_statehandler);
 }
 
+Hama_HSM_State_T On_Guard(Hama_HSM_T & machine, Hama_HSM_Signal_T const signal,
+      Hama_HSM_Statechart_T const * pseudostate, uint32_t pseudostate_size)
+{
+   Hama_HSM_State_T target = machine.sizeof_statehandler;
+   while(NULL != pseudostate)
+   {
+         if(pseudostate->guard(machine))
+         {
+            machine.transitions[machine.transition_idx++] = pseudostate->transition;
+            pseudostate_size = pseudostate->sizeof_pseudostates;
+            pseudostate = pseudostate->pseudostates;
+         }
+         else
+         {
+            break;
+         }
+      pseudostate = HSM_Tb_Search<Hama_HSM_Statechart_T, HSM_Statechart_Equals_To>(signal,
+            pseudostate, pseudostate_size);
+
+   }
+   return target;
+}
+
 Hama_HSM_State_T On_Handle(Hama_HSM_T& machine, Hama_HSM_Signal_T const signal)
 {
    Hama_HSM_State_T target = machine.sizeof_statehandler;
    Hama_HSM_State_T super_state = machine.current_state;
    Hama_HSM_Handle_T const * handle = NULL;
    TR_INFO_1("%s", __FUNCTION__);
+   machine.transition_idx = 0;
    do
    {
       handle = HSM_Tb_Search<Hama_HSM_Handle_T, HSM_Handle_Equals_To>(super_state,
@@ -138,16 +163,13 @@ Hama_HSM_State_T On_Handle(Hama_HSM_T& machine, Hama_HSM_Signal_T const signal)
 
       if(NULL != handle)
       {
-         Hama_HSM_Statechart_T const * statechart =
-               HSM_Tb_Search<Hama_HSM_Statechart_T, HSM_Statechart_Equals_To>(signal,
-                     handle->statechart, handle->sizeof_statechart);
+         Hama_HSM_Statechart_T const * statechart = handle->statechart;
+         size_t statechar_size = handle->sizeof_statechart;
 
-         if(NULL != statechart)
+         target = On_Guard(machine, signal, statechart, statechar_size);
+
+         if(target < machine.sizeof_statehandler)
          {
-            if(statechart->handle(machine))
-            {
-               target = statechart->next_state;
-            }
             break;
          }
          else
@@ -160,6 +182,19 @@ Hama_HSM_State_T On_Handle(Hama_HSM_T& machine, Hama_HSM_Signal_T const signal)
          super_state < machine.sizeof_statehandler);
    return target;
 }
+
+void On_Transition(Hama_HSM_T & machine)
+{
+   void (**transition)(Hama_HSM_T & machine) = machine.transitions;
+   while(machine.transition_idx--)
+   {
+      if(NULL != *transition)
+      {
+         (*transition)(machine);
+      }
+      ++transition;
+   }
+}
 /*=====================================================================================* 
  * Exported Function Definitions
  *=====================================================================================*/
@@ -168,6 +203,7 @@ void hama::HSM_Init(Hama_HSM_State_T const initial_state, Hama_HSM_T& machine, H
    machine.current_state = initial_state;
    machine.statehandler = statehandler;
    machine.sizeof_statehandler = sizeof_statehandler;
+   machine.transition_idx = 0;
 
    On_Entry(machine, initial_state);
 
@@ -208,15 +244,15 @@ void hama::HSM_Dispatch(Hama_HSM_T& machine, Hama_HSM_Event_T const & hsm_ev)
    if(machine.current_state < machine.sizeof_statehandler)
    {
       Hama_HSM_State_T target_state = On_Handle(machine, hsm_ev.signal);
+
       if(target_state < machine.sizeof_statehandler)
       {
          On_Exit(machine);
+         On_Transition(machine);
          On_Entry(machine, target_state);
          machine.current_state = target_state;
       }
    }
-
-
 }
 /*=====================================================================================* 
  * hama_hsm.cpp
