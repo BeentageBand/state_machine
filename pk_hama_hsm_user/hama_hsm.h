@@ -38,20 +38,20 @@ namespace hama
 
 #define HSM_STATECHART_DEF(_signal, _source, _guard, _handle, _target) \
 {                                                                      \
-   _signal,                                                            \
    _source,                                                            \
+   _signal,                                                            \
    _guard,                                                             \
    _handle,                                                            \
    _target                                                             \
 },                                                                     \
 
-#define HSM_STATE_HANDLER_DEF( _state, _super, _entry, _exit, _statechart) \
-{                                                                          \
-   _state,                                                                 \
-   _super,                                                                 \
-   _entry,                                                                 \
-   _exit                                                                   \
-},                                                                         \
+#define HSM_STATE_HANDLER_DEF( _state, _super, _entry, _exit) \
+{                                                             \
+   _state,                                                    \
+   _super,                                                    \
+   _entry,                                                    \
+   _exit                                                      \
+},                                                            \
 
 
 /*=====================================================================================* 

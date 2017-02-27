@@ -46,7 +46,8 @@ struct Statechart_Key_T
  * Local Function Prototypes
  *=====================================================================================*/
 template <typename K, typename T, bool (*EqualsTo)(K const &, T const &)>
-static uint32_t HSM_Tb_Search(K const & key, T * table, uint32_t const size, T * found);
+static uint32_t HSM_Tb_Search(K const & key, T * table, uint32_t const size, T *& found,
+      uint32_t i = 0U);
 
 static void On_Entry(Hama_HSM_T& machine, Hama_HSM_State_T const target);
 
@@ -58,20 +59,24 @@ static Hama_HSM_State_T On_Handle(Hama_HSM_T& machine, Hama_HSM_Signal_T const s
  *=====================================================================================*/
 inline bool HSM_Statechart_Equals_To(Statechart_Key_T const & a, Hama_HSM_Statechart_T const & b)
 {
+   TR_INFO_5("%s, key state %d == statechart state %d && "
+         "key signal %d == statechart signal %d ", __FUNCTION__,
+         a.state, b.source_state, a.signal, b.signal);
    return (a.signal == b.signal) && (a.state == b.source_state);
 }
 
 inline bool HSM_Handle_Equals_To(Hama_HSM_State_T const & a, Hama_HSM_Handle_T const & b)
 {
+   TR_INFO_3("%s, state %d == handle %d", __FUNCTION__, a, b.state);
    return a == b.state;
 }
 /*=====================================================================================* 
  * Local Function Definitions
  *=====================================================================================*/
 template <typename K, typename T, bool (*EqualsTo) (K const &, T const &) >
-uint32_t HSM_Tb_Search(K const & key, T * table, uint32_t const size, T * found)
+uint32_t HSM_Tb_Search(K const & key, T * table, uint32_t const size, T *& found,
+      uint32_t i)
 {
-   uint32_t i = 0;
    for(; i < size; ++i)
    {
       if(EqualsTo(key, table[i]))
@@ -149,13 +154,19 @@ Hama_HSM_State_T On_Guard(Hama_HSM_T & machine, Hama_HSM_Signal_T const signal,
    {
       statechart_num = HSM_Tb_Search<Statechart_Key_T, Hama_HSM_Statechart_T,
             HSM_Statechart_Equals_To>(key,
-            machine.statechart, machine.size_statechart, pseudostate);
+                  &machine.statechart[statechart_num],
+                  machine.size_statechart,
+                  pseudostate, statechart_num);
 
-      if(NULL != pseudostate)
+      if(statechart_num < machine.size_statechart)
       {
+         TR_INFO_3("source %d, signal %d, idx %d", pseudostate->source_state,
+               pseudostate->signal, statechart_num);
          if(NULL == pseudostate->guard || pseudostate->guard(machine))
          {
             machine.transitions[machine.transition_idx++] = pseudostate->transition;
+            ++statechart_num;
+            target = pseudostate->target_state;
          }
          else
          {
@@ -181,6 +192,7 @@ Hama_HSM_State_T On_Handle(Hama_HSM_T& machine, Hama_HSM_Signal_T const signal)
 
       if(NULL != handle) //State exists!
       {
+         TR_INFO_2("handler state %d, signal %d", handle->state, signal);
          target = On_Guard(machine, signal, handle);
 
          if(target < machine.size_statehandler)
