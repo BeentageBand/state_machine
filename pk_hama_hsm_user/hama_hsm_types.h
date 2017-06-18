@@ -13,21 +13,24 @@
 /*=====================================================================================*
  * Project Includes
  *=====================================================================================*/
-
+#include "std_reuse.h"
 /*=====================================================================================* 
  * Standard Includes
  *=====================================================================================*/
-#include <stdint.h>
-#include <stdlib.h>
+
 /*=====================================================================================* 
  * Exported Define Macros
  *=====================================================================================*/
-#define Num_Elements(array) static_cast<uint32_t>(sizeof(array)/sizeof(array[0]))
+#ifdef __cplusplus
+extern "C" {
+#endif
 /*=====================================================================================* 
  * Exported Type Declarations
  *=====================================================================================*/
+union Hama_HSM;
 typedef uint16_t Hama_HSM_Signal_T;
 typedef uint16_t Hama_HSM_State_T;
+typedef void(*HSM_Transitions_Function_T)(union Hama_HSM * const machine);
 
 typedef struct
 {
@@ -36,35 +39,26 @@ typedef struct
    size_t data_size;
 }Hama_HSM_Event_T;
 
-struct Hama_HSM_T;
-
-struct Hama_HSM_Statechart_T
+typedef struct
 {
    Hama_HSM_State_T source_state;
    Hama_HSM_Signal_T signal;
-   bool (*guard)(Hama_HSM_T & machine);
-   void (*transition)(Hama_HSM_T & machine);
+   bool (*guard)(union Hama_HSM * const machine);
+   void (*transition)(union Hama_HSM * const machine);
    Hama_HSM_State_T target_state;
-};
+}Hama_HSM_Statechart_T;
 
-struct Hama_HSM_Handle_T
+typedef struct
 {
    Hama_HSM_State_T state;
    Hama_HSM_State_T super;
-   void (*entry)(Hama_HSM_T & machine);
-   void (*exit)(Hama_HSM_T & machine);
-};
+   void (*entry)(union Hama_HSM * const machine);
+   void (*exit)(union Hama_HSM * const machine);
+}Hama_HSM_Handle_T;
 
-struct Hama_HSM_T
-{
-   Hama_HSM_State_T current_state;
-   Hama_HSM_Handle_T * statehandler;
-   Hama_HSM_Statechart_T * statechart;
-   uint32_t size_statehandler;
-   uint32_t size_statechart;
-   void(*transitions[8])(Hama_HSM_T & machine);
-   uint8_t transition_idx;
-};
+#ifdef __cplusplus
+}
+#endif
 /*=====================================================================================* 
  * hama_hsm_types.h
  *=====================================================================================*
