@@ -1,30 +1,56 @@
-/*=====================================================================================*/
-/**
- * hama_hsm.c
- * author : puch
- * date : Oct 22 2015
- *
- * description : Any comments
- *
- */
-/*=====================================================================================*/
-#define CLASS_IMPLEMENTATION
-/*=====================================================================================*
- * Project Includes
- *=====================================================================================*/
-#include "hama_hsm.h"
-#include "hama_dbg_trace.h"
-/*=====================================================================================* 
- * Standard Includes
- *=====================================================================================*/
-#include <stdlib.h>
-/*=====================================================================================* 
- * Local X-Macros
- *=====================================================================================*/
+#define COBJECT_IMPLEMENTATION
+#include "state_machine.h"
+#include "dbg_log.h"
 
-/*=====================================================================================* 
- * Local Define Macros
- *=====================================================================================*/
+static void state_machine_delete(struct Object * const obj);
+static void state_machine_dispatch(union State_Machine * const this, union Mail * const mail);
+static bool state_machine_transition_to(union State_Machine * const this, union St_Machine_State * const state)
+
+struct State_Machine_Class State_Machine_Class =
+{
+      {state_machine_delete, NULL},
+      state_machine_dispatch,
+      state_machine_transition_to
+};
+static State_Machine State_Machine = {NULL};
+
+void state_machine_delete(struct object * const obj)
+{}
+
+void state_machine_dispatch(union State_Machine * const this, union Mail * const mail)
+{
+      if(NULL != this->current_st)
+      {
+            this->vtbl->transition_to(this, this->initial_st);
+      }
+      else
+      {
+            union St_Machine_State * current_st = this->current_st;
+            union St_Machine_State * next_st = current_st->vtbl->next_st(current_st, mail);
+            if(NULL != next_st && current_st->vtbl->guard(current_st, next_st->stid))
+            {
+                  this->vtbl->state_transition_to(this, next_st);
+            }
+      }
+}
+bool state_machine_transition_to(union State_Machine * const this, union St_Machine_State * const state)
+{
+      this->current_st = state;
+
+}
+
+void Populate_State_Machine(union State_Machine * const this, union St_Machine_State * const initial_st)
+{
+      if(NULL == State_Machine.vtbl)
+      {
+            State_Machine.vtbl = &State_Machine_Class;
+            State_Machine.initial_st = NULL;
+            State_Machine.current_st = NULL;
+      }
+      memcpy(this, &State_Machine, sizeof(State_Machine));
+      this->initial_st = initial_st;
+}
+
 #define HSM_Name(name) _concat(Hama_HSM_,name)
 #define HSM_Type(name) _concat(HSM_Name(name),_T)
 #define HSM_Tb_Search(K, T) _concat(K,_concat(T,Tb_Search))
@@ -42,25 +68,15 @@ uint32_t const size, HSM_Type(T) ** found, uint32_t i) \
    } \
    return i; \
 } \
-/*=====================================================================================* 
- * Local Type Definitions
- *=====================================================================================*/
+
 typedef struct
 {
    Hama_HSM_Signal_T signal;
    Hama_HSM_State_T state;
 }Hama_HSM_Key_T;
-/*=====================================================================================* 
- * Local Object Definitions
- *=====================================================================================*/
-CLASS_DEFINITION
-/*=====================================================================================* 
- * Exported Object Definitions
- *=====================================================================================*/
 
-/*=====================================================================================* 
- * Local Function Prototypes
- *=====================================================================================*/
+CLASS_DEFINITION
+
 static void Hama_HSM_ctor(Hama_HSM_T * const this, Hama_HSM_State_T const initial_state,
       Hama_HSM_Handle_T * const statehandler, uint32_t const sizeof_statehandler,
       Hama_HSM_Statechart_T * const statechart, uint32_t const sizeof_statechart);
@@ -86,9 +102,7 @@ static bool_t StateHandleEqualsTo(Hama_HSM_State_T const * const a, Hama_HSM_Han
    TR_INFO_3("%s, state %d == handle %d", __FUNCTION__, *a, b->state);
    return *a == b->state;
 }
-/*=====================================================================================* 
- * Local Function Definitions
- *=====================================================================================*/
+
 void Hama_HSM_init(void)
 {
    printf("%s \n", __FUNCTION__);
@@ -290,9 +304,3 @@ void Hama_HSM_dispatch(Hama_HSM_T * const machine, Hama_HSM_Event_T const * cons
       }
    }
 }
-/*=====================================================================================* 
- * hama_hsm.c
- *=====================================================================================*
- * Log History
- *
- *=====================================================================================*/
