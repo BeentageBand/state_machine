@@ -4,24 +4,21 @@
 #include "cobject.h"
 #include "ipc.h"
 
+#define STID_NOT_FOUND UINT32_T_MAX
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef union St_Machine_State * St_Machine_State_Ptr_T;
-#define CMap_Params IPC_MID_T, St_Machine_State_Ptr_T
-#include "cmap.h"
-#undef CMap_Params
+typedef uint32_t STID_T;
 
-union St_Machine_State
+struct St_Machine_Transition
 {
-    struct St_Machine_State_Class _private * _private vtbl;
-    struct
-    {
-        struct Object Object;
-        St_Machine_Statechart_T _private statechart;
-    };
-}St_Machine_State_T;
+	IPC_MID_T mid;
+	STID_T stid;
+	bool (* guard)(union State_Machine * const, union St_Machine_State * const);
+	void (* action) (union State_Machine * const);
+};
+
 #ifdef __cplusplus
 }
 #endif

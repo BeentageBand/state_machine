@@ -13,8 +13,10 @@ typedef union State_Machine
     struct
     {
         struct Object Object;
-        union St_Machine_State _private * _private initial_st;
-        union St_Machine_State _private * _private current_st;
+        STID_T _private current_st;
+        STID_T _private initial_st;
+        union St_Machine_State _private * _private st_chart;
+        size_t _private n_states;
     };
 }State_Machine_T;
 
@@ -27,8 +29,10 @@ typedef struct State_Machine_Class
 
 extern State_Machine_Class_T _private State_Machine_Class;
 
-extern void Populate_State_Machine(union State_Machine * const st_machine, union St_Machine_State * const initial_st);
-
+extern void Populate_State_Machine(union State_Machine * const this,
+		union St_Machine_State * const st_chart,
+		size_t const n_states,
+		STID_T const initial_st)
 #ifdef __cplusplus
 }
 #endif
