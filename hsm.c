@@ -8,24 +8,24 @@ static union HSM HSM = {{NULL}};
 
 HSM_Class_T HSM_Class = 
 {
-	{&State_Machine_Class, hsm_delete},
-	NULL,
-	hsm_get_state,
+   {&State_Machine_Class, hsm_delete},
+   NULL,
+   hsm_get_state,
 };
 
 void Populate_HSM(union HSM * const this,
-		struct HSM_Chart * const hsm_chart,
-		size_t const n_chart,
-		union St_Machine_State * const states,
-		size_t const nstates)
+      struct HSM_Chart * const hsm_chart,
+      size_t const n_chart,
+      union St_Machine_State * const states,
+      size_t const nstates)
 {
-	if(NULL == HSM.vtbl)
-	{
+   if(NULL == HSM.vtbl)
+   {
 
 
-	}
+   }
 
-	memcpy(this, &HSM, sizeof(HSM));
+   memcpy(this, &HSM, sizeof(HSM));
 
 
 

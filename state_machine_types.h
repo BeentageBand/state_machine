@@ -19,10 +19,10 @@ union St_Machine_State;
 
 struct St_Machine_Transition
 {
-	IPC_MID_T mid;
-	STID_T stid;
-	bool (* guard)(union State_Machine * const, union St_Machine_State * const);
-	void (* action) (union State_Machine * const);
+   IPC_MID_T mid;
+   STID_T stid;
+   bool (* guard)(union State_Machine * const, union St_Machine_State * const);
+   void (* action) (union State_Machine * const);
 };
 
 #ifdef __cplusplus
