@@ -1,5 +1,6 @@
 #define COBJECT_IMPLEMENTATION
 #include "st_machine_state.h"
+#include "state_machine.h"
 
 static void st_machine_state_delete(struct Object * const obj);
 static STID_T st_machine_state_next_st(union St_Machine_State * const this, union Mail * const mail);

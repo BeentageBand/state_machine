@@ -1,7 +1,8 @@
 #ifndef STATE_MACHINE_H_
 #define STATE_MACHINE_H_
-#include "state_machine_types.h"
 #include "mail.h"
+#include "state_machine_types.h"
+#include "st_machine_state.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,7 +33,8 @@ extern State_Machine_Class_T _private State_Machine_Class;
 extern void Populate_State_Machine(union State_Machine * const this,
 		union St_Machine_State * const st_chart,
 		size_t const n_states,
-		STID_T const initial_st)
+		STID_T const initial_st);
+
 #ifdef __cplusplus
 }
 #endif
