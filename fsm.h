@@ -69,7 +69,7 @@ extern void Populate_FSM(union FSM * const this,
 #define FSM_Declare_Chart(state_def, fsm_chart_name) \
    state_def(Declare_Handles) \
    state_def(Declare_TrChart) \
-   static struct FSM_Chart fsm_chart_name []= \
+   struct FSM_Chart fsm_chart_name []= \
    { \
    state_def(Declare_StChart) \
    };
@@ -80,7 +80,7 @@ extern void Populate_FSM(union FSM * const this,
    transition
 #define FSM_State_Declare_StChart(stid, transition) {stid, CAT(stid, _Transition_Tb), Num_Elems(CAT(stid, _Transition_Tb))},
 #define FSM_State_Declare_TrChart(stid, ...) \
-   static struct St_Machine_Transition CAT(stid, _Transition_Tb) [] = \
+   struct St_Machine_Transition CAT(stid, _Transition_Tb) [] = \
    { \
       __VA_ARGS__ \
    };
