@@ -15,7 +15,7 @@ void fsm_delete(struct Object * const obj){}
 
 union St_Machine_State * fsm_get_state(union State_Machine * const st_m, STID_T const stid)
 {
-   if(stid < st_m->n_states) return NULL;
+   if(stid >= st_m->n_states) return NULL;
    return st_m->st_chart + stid;
 }
 

@@ -4,7 +4,7 @@
 #include "cobject.h"
 #include "ipc_types.h"
 
-#define STID_NOT_FOUND UINT32_T_MAX
+#define STID_NOT_STATE UINT32_MAX
 #ifdef __cplusplus
 extern "C" {
 #endif

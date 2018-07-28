@@ -3,7 +3,7 @@
 #include "state_machine.h"
 
 static void st_machine_state_delete(struct Object * const obj);
-static STID_T st_machine_state_next_st(union St_Machine_State * const this, union Mail * const mail);
+static STID_T st_machine_state_next_st(union St_Machine_State * const this, IPC_MID_T const mid);
 
 static union St_Machine_State St_Machine_State = {NULL};
 struct St_Machine_State_Class St_Machine_State_Class = 
@@ -20,7 +20,7 @@ STID_T st_machine_state_next_st(union St_Machine_State * const this, IPC_MID_T c
 {
    STID_T i;
    for(i = 0; 
-         i < this->nhandlers &&
+         i < this->nhandlers
          ; ++i)
    {
       if(mid != this->handle[i].mid)
@@ -28,11 +28,11 @@ STID_T st_machine_state_next_st(union St_Machine_State * const this, IPC_MID_T c
          return this->handle[i].stid;
       }
    }
-   return STID_NOT_FOUND;
+   return STID_NOT_STATE;
 }
 
 void Populate_St_Machine_State(union St_Machine_State * const this, STID_T const stid,
-      struct St_Machine_Handle * const handle_buff, size_t const nhandlers)
+      struct St_Machine_Transition * const handle_buff, size_t const nhandlers)
 {
    if(NULL == St_Machine_State.vtbl)
    {

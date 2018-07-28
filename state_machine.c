@@ -1,6 +1,8 @@
 #define COBJECT_IMPLEMENTATION
-#include "state_machine.h"
+#undef Dbg_FID
+#define Dbg_FID DBG_FID_DEF(STATE_MACHINE_FID,0)
 #include "dbg_log.h"
+#include "state_machine.h"
 
 static void state_machine_delete(struct Object * const obj);
 static void state_machine_dispatch(union State_Machine * const this, union Mail * const mail);
@@ -16,11 +18,11 @@ struct State_Machine_Class State_Machine_Class =
      state_machine_get_state
 };
 
-static State_Machine State_Machine = {{NULL}};
+static union State_Machine State_Machine = {{NULL}};
 
-void state_machine_delete(struct object * const obj)
+void state_machine_delete(struct Object * const obj)
 {
-   union State_Machine * const this = _cast(State_Machine, obj);
+   union State_Machine * const this = (union State_Machine *)Object_Cast(&State_Machine_Class.Class, obj);
    memcpy(this, &State_Machine, sizeof(State_Machine));
    this->vtbl = NULL;
 
@@ -30,23 +32,32 @@ void state_machine_dispatch(union State_Machine * const this, union Mail * const
 {
    STID_T current_st = this->current_st;
    STID_T next_stid = this->initial_st; 
-   struct St_Machine_Transition transition =  {0, next_stid, NULL, this->vtbl->init};
+   struct St_Machine_Transition transition =  {0, next_stid, NULL, next_stid};
 
-   if(NULL != current_st)
+   if(STID_NOT_STATE != current_st)
    {
-      memcpy(&transition, current_st->vtbl->next_st(current_st, mail->mid), sizeof(transition));
+      uint8_t i;
+      for(i = 0; i < this->n_states; ++i)
+      {
+            if(mail->mid == this->st_chart[current_st].handle[i].mid)
+            {
+                  break;
+            }
+
+      }
+      memcpy(&transition, this->st_chart[current_st].handle + i, sizeof(transition));
       next_stid = transition.stid;
    }
    else
    {
-      Dbg_Info("Init State Machine on STID = %d", stid);
+      Dbg_Info("Init State Machine on STID = %d", this->initial_st);
    }
 
    union St_Machine_State * next_st = this->vtbl->get_state(this, next_stid);
 
    if(NULL != next_st)
    {
-      this->vtbl->state_transition_to(this, &transition, next_st);
+      this->vtbl->transition_to(this, &transition, next_st);
    }
    else
    {
@@ -67,7 +78,7 @@ bool state_machine_transition_to(union State_Machine * const this, struct St_Mac
       }
    }
 
-   this->current_st = state;
+   this->current_st = state->stid;
    Isnt_Nullptr(transition->action, true);
    transition->action(this);
    return true;
@@ -75,12 +86,12 @@ bool state_machine_transition_to(union State_Machine * const this, struct St_Mac
 
 union St_Machine_State * state_machine_get_state(union State_Machine * const this, STID_T const stid)
 {
-   union St_Machine_State * const state = NULL;
+   union St_Machine_State * state = NULL;
    Dbg_Fault("%s, abstract method, please override", __func__);
 
    if(stid < this->n_states)
    {
-      state = this->st_char + stid;
+      state = this->st_chart + stid;
    }
    return state;
 }

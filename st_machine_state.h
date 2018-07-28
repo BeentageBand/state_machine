@@ -15,7 +15,7 @@ typedef union St_Machine_State
       struct Object Object;
       STID_T _private stid;
       size_t nhandlers;
-      struct St_Machine_Handle _private * _private handle;
+      struct St_Machine_Transition _private * _private handle;
    };
 }St_Machine_State_T;
 
@@ -28,11 +28,9 @@ typedef struct St_Machine_State_Class
 extern St_Machine_State_Class_T _private St_Machine_State_Class;
 
 extern void Populate_St_Machine_State(union St_Machine_State * const state, STID_T const stid,
-      struct St_Machine_Handle * const handle_buff, size_t const nhandlers);
+      struct St_Machine_Transition * const handle_buff, size_t const nhandlers);
 
 #ifdef __cplusplus
 }
 #endif
 #endif /*ST_MACHINE_STATE_H_*/
-
-
