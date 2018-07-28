@@ -9,7 +9,7 @@ FSM_Class_T FSM_Class =
    {NULL, fsm_delete},
 };
 
-static union FSM FSM = {{NULL}};
+static union FSM FSM = {NULL};
 
 void fsm_delete(struct Object * const obj){}
 

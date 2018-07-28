@@ -18,7 +18,7 @@ struct State_Machine_Class State_Machine_Class =
      state_machine_get_state
 };
 
-static union State_Machine State_Machine = {{NULL}};
+static union State_Machine State_Machine = {NULL};
 
 void state_machine_delete(struct Object * const obj)
 {
