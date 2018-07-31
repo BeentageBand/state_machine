@@ -36,20 +36,20 @@ extern void Populate_FSM(union FSM * const fsm,
  * Example:
  * #define SOME_FSM(cb) \
  * FSM_STATE_DEF(cb, INIT_STID, \
- *      FSM_TRANSITION_DEF(cb, SIGNAL_1_MID, STATE_1_STID, process_action_1) \
- *      FSM_TRANSITION_DEF(cb, SIGNAL_2_MID, STATE_2_STID, process_action_2) \
+ *      FSM_TRANSITION_DEF(cb, SIGNAL_1_MID, STATE_1_STID, guard_1, process_action_1) \
+ *      FSM_TRANSITION_DEF(cb, SIGNAL_2_MID, STATE_2_STID, guard_2, process_action_2) \
  *      ) \
  * FSM_STATE_DEF(cb, STATE_1_STID, \
- *      FSM_TRANSITION_DEF(cb, SIGNAL_SHUT_MID, DONE_STID, process_action_shut) \
- *      FSM_TRANSITION_DEF(cb, SIGNAL_2_MID, STATE_2_STID, process_action_2) \
+ *      FSM_TRANSITION_DEF(cb, SIGNAL_SHUT_MID, DONE_STID, guard_shut, process_action_shut) \
+ *      FSM_TRANSITION_DEF(cb, SIGNAL_2_MID, STATE_2_STID, guard_2, process_action_2) \
  *      ) \
  * FSM_STATE_DEF(cb, STATE_2_STID, \
- *      FSM_TRANSITION_DEF(cb, SIGNAL_SHUT_MID, DONE_STID, process_action_shut) \
- *      FSM_TRANSITION_DEF(cb, SIGNAL_1_MID, STATE_1_STID, process_action_1) \
+ *      FSM_TRANSITION_DEF(cb, SIGNAL_SHUT_MID, DONE_STID, guard_shut, process_action_shut) \
+ *      FSM_TRANSITION_DEF(cb, SIGNAL_1_MID, STATE_1_STID, guard_action_1, process_action_1) \
  *      ) \
  * FSM_STATE_DEF(cb, DONE_STID, \
- *      FSM_TRANSITION_DEF(cb, SIGNAL_1_MID, INIT_STID, process_action_done) \
- *      FSM_TRANSITION_DEF(cb, SIGNAL_2_MID, INIT_STID, process_action_done) \
+ *      FSM_TRANSITION_DEF(cb, SIGNAL_1_MID, INIT_STID, guard_done, process_action_done) \
+ *      FSM_TRANSITION_DEF(cb, SIGNAL_2_MID, INIT_STID, guard_done, process_action_done) \
  *      ) \
  *
  * Use MACROS:
@@ -84,10 +84,10 @@ extern void Populate_FSM(union FSM * const fsm,
    { \
       __VA_ARGS__ \
    };
-#define FSM_TRANSITION_DEF(cb, mid, stid, action) CAT(FSM_Transition_, cb)(mid, stid, action)
-#define FSM_Transition_Declare_Handles(mid, stid, action)
-#define FSM_Transition_Declare_StChart(mid, stid, action)
-#define FSM_Transition_Declare_TrChart(mid, stid, action) {mid, stid, CAT(stid, _guard), action},
+#define FSM_TRANSITION_DEF(cb, mid, stid, guard, action) CAT(FSM_Transition_, cb)(mid, stid, guard, action)
+#define FSM_Transition_Declare_Handles(mid, stid, guard, action)
+#define FSM_Transition_Declare_StChart(mid, stid, guard, action)
+#define FSM_Transition_Declare_TrChart(mid, stid, guard, action) {mid, stid, guard, action},
 
 
 #ifdef __cplusplus
