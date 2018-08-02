@@ -67,7 +67,6 @@ extern void Populate_FSM(union FSM * const fsm,
  */
 
 #define FSM_Declare_Chart(state_def, fsm_chart_name) \
-   state_def(Declare_Handles) \
    state_def(Declare_TrChart) \
    struct FSM_Chart fsm_chart_name []= \
    { \
@@ -75,9 +74,6 @@ extern void Populate_FSM(union FSM * const fsm,
    };
 
 #define FSM_STATE_DEF(cb, stid, transitions) CAT(FSM_State_, cb) (stid, transitions)
-#define FSM_State_Declare_Handles(stid, transition) \
-   static bool CAT(stid, _guard)(union State_Machine * const fsm, union St_Machine_State * const state); \
-   transition
 #define FSM_State_Declare_StChart(stid, transition) {stid, CAT(stid, _Transition_Tb), Num_Elems(CAT(stid, _Transition_Tb))},
 #define FSM_State_Declare_TrChart(stid, ...) \
    struct St_Machine_Transition CAT(stid, _Transition_Tb) [] = \
