@@ -37,7 +37,7 @@ void state_machine_dispatch(union State_Machine * const this, union Mail * const
    if(STID_NOT_STATE != current_st)
    {
       uint8_t i;
-      for(i = 0; i < this->n_states; ++i)
+      for(i = 0; i < this->st_chart[current_st].nhandlers; ++i)
       {
             if(mail->mid == this->st_chart[current_st].handle[i].mid)
             {
