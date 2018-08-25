@@ -8,7 +8,7 @@ static STID_T st_machine_state_next_st(union St_Machine_State * const this, IPC_
 static union St_Machine_State St_Machine_State = {NULL};
 struct St_Machine_State_Class St_Machine_State_Class = 
 {
-   {NULL, st_machine_state_delete},
+   {st_machine_state_delete, NULL},
    st_machine_state_next_st
 };
 

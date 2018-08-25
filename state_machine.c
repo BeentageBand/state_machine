@@ -32,7 +32,7 @@ void state_machine_dispatch(union State_Machine * const this, union Mail * const
 {
    STID_T current_st = this->current_st;
    STID_T next_stid = this->initial_st; 
-   struct St_Machine_Transition transition =  {0, next_stid, NULL, next_stid};
+   struct St_Machine_Transition transition =  {0, next_stid, NULL, NULL};
 
    if(STID_NOT_STATE != current_st)
    {

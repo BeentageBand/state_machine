@@ -6,7 +6,7 @@ static union St_Machine_State * fsm_get_state(union State_Machine * const st_m, 
 
 FSM_Class_T FSM_Class = 
 {
-   {NULL, fsm_delete},
+   {fsm_delete, NULL},
 };
 
 static union FSM FSM = {NULL};
