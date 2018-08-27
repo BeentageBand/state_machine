@@ -38,7 +38,7 @@ void Populate_St_Machine_State(union St_Machine_State * const this, STID_T const
    {
       St_Machine_State.vtbl = & St_Machine_State_Class;
    }
-   memcpy(this, &St_Machine_State, sizeof(St_Machine_State));
+   _clone(this, St_Machine_State);
    this->stid = stid;
    this->handle = handle_buff;
    this->nhandlers = nhandlers;

@@ -20,7 +20,7 @@ union St_Machine_State * fsm_get_state(union State_Machine * const st_m, STID_T 
 }
 
 void Populate_FSM(union FSM * const this,
-      struct St_Machine_Transition * const transition_chart, 
+      struct FSM_Chart * const transition_chart, 
       size_t ntransitions,
       union St_Machine_State * const st_chart,
       size_t const n_states)
@@ -32,14 +32,14 @@ void Populate_FSM(union FSM * const this,
       Object_Init(&FSM.Object, &FSM_Class.Class, sizeof(FSM_Class.State_Machine));
       FSM_Class.State_Machine.get_state = fsm_get_state;
    }
-   memcpy(this, &FSM, sizeof(FSM));
-
+   _clone(this, FSM);
    Populate_State_Machine(&this->State_Machine, st_chart, n_states, 0);
+   this->vtbl = &FSM_Class;
 
    uint32_t i = n_states;
    while(i--)
    {
       Populate_St_Machine_State(st_chart + i, transition_chart[i].stid,
-            st_chart[i].handle, st_chart[i].nhandlers);
+            transition_chart[i].transition_tb, transition_chart[i].ntransitions);
    }
 }

@@ -28,7 +28,7 @@ typedef union FSM
 extern FSM_Class_T _private FSM_Class;
 
 extern void Populate_FSM(union FSM * const fsm,
-      struct St_Machine_Transition * const transition_chart, 
+      struct FSM_Chart * const transition_chart, 
       size_t ntransitions,
       union St_Machine_State * const st_chart,
       size_t const n_states);

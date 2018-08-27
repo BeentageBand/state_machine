@@ -72,7 +72,7 @@ bool state_machine_transition_to(union State_Machine * const this, struct St_Mac
 {
    if(NULL != transition->guard)
    {
-      if(!transition->guard(this, state))
+      if(!transition->guard(state, this))
       {
          return false;
       }
