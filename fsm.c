@@ -1,4 +1,6 @@
 #define COBJECT_IMPLEMENTATION
+#define Dbg_FID STATE_MACHINE_FID, 4
+#include "dbg_log.h"
 #include "fsm.h"
 
 static void fsm_delete(struct Object * const obj);
@@ -16,6 +18,7 @@ void fsm_delete(struct Object * const obj){}
 union St_Machine_State * fsm_get_state(union State_Machine * const st_m, STID_T const stid)
 {
    if(stid >= st_m->n_states) return NULL;
+   Dbg_Info("%s: state %d found!!", __func__, stid);
    return st_m->st_chart + stid;
 }
 
